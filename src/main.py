@@ -4,12 +4,14 @@ from PIL import Image
 from sys import argv
 import math
 import cv2
+import huffman
+import collections
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 M = 8
-Q = 32
+Q = 4
 U = 256
 
 ###############################################################################
@@ -44,6 +46,40 @@ def compress_dc(uncompressed):
     for i in range(len(uncompressed)-1, 0, -1):
         uncompressed[i][0,0] -= uncompressed[i-1][0,0]
 
+def entropy_coding(block):
+    zigzag = []
+    x = 0
+    y = 0
+    for s in range(2 *M-1):
+        for t in range(0, M):
+            if 0 <= s - t < M:
+                if s % 2 == 1: zigzag.append(block[t,s-t])
+                else: zigzag.append(block[s-t, t])
+    compressed_zigzag = []
+    i = 0
+    while i < len(zigzag):
+        zero_preceding = 0
+        while i < len(zigzag) and zigzag[i] == 0:
+            zero_preceding += 1
+            i += 1
+        else:
+            if i >= len(zigzag):
+                break
+        compressed_zigzag.append((zigzag[i], zero_preceding))
+        i += 1
+    return compressed_zigzag
+
+def huffman_code(zigzag_blocks):
+    total_numbers = []
+    for zz in zigzag_blocks:
+        total_numbers += zz
+    h = huffman.codebook(collections.Counter(total_numbers).items())
+    string_result = ''
+    for n in total_numbers:
+        string_result += h[n]
+    return string_result, h
+
+
 ###############################################################################
 ###########################  INVERSE  #########################################
 ###############################################################################
@@ -72,25 +108,46 @@ def uncompress_dc(compressed):
     for i in range(1, len(compressed)):
         compressed[i][0,0] += compressed[i-1][0,0]
 
-image = np.asarray(Image.open(argv[1]).convert('L'))
+###############################################################################
+#########################################  MAIN ###############################
+###############################################################################
 
-##### FORWARD ###########
-image_blocks = block_division(image)
-dct_blocks = list(map(apply_dct, image_blocks))
-quantized_blocks = list(map(lambda x: quantize(x, Q), dct_blocks))
-#print(quantized_blocks)
-compress_dc(quantized_blocks)
-print(quantized_blocks)
-##### INVERSE ###########
-uncompress_dc(quantized_blocks)
-unquantized_blocks = list(map(lambda x: unquantize(x, Q), quantized_blocks))
-original_blocks = list(map(apply_idct, unquantized_blocks))
-restored_image = join_blocks(original_blocks)
+def is_greyscale(image):
+    rgb_image = image.convert('RGB')
+    w,h = rgb_image.size
+    for i in range(w):
+        for j in range(h):
+            r,g,b = rgb_image.getpixel((i,j))
+            if r != g != b: return False
+    return True
+
+def greyscale(image):
+    ##### FORWARD ###########
+    image_blocks = block_division(image)
+    dct_blocks = list(map(apply_dct, image_blocks))
+    quantized_blocks = list(map(lambda x: quantize(x, Q), dct_blocks))
+    compress_dc(quantized_blocks)
+    zigzag_blocks = list(map(entropy_coding, quantized_blocks))
+    huffman_coding, huffman_map = huffman_code(zigzag_blocks)
+
+    ##### INVERSE ###########
+    uncompress_dc(quantized_blocks)
+    unquantized_blocks = list(map(lambda x: unquantize(x, Q), quantized_blocks))
+    original_blocks = list(map(apply_idct, unquantized_blocks))
+    restored_image = join_blocks(original_blocks)
+    return huffman_coding, restored_image
 
 
-
-plt.subplot(1,2,1).imshow(image, cmap='gray') #, vmin=0, vmax=255)
-plt.subplot(1,2,2).imshow(restored_image, cmap='gray') #, vmin=0, vmax=255)
-plt.show()
+pil_image = Image.open(argv[1])
+if is_greyscale(pil_image):
+    image = np.asarray(pil_image.convert('L'))
+    huffman_coding, restored_image = greyscale(image)
+    print(huffman_coding)
+    print('Compressed size:', len(huffman_coding) / 1024, 'KB')
+    plt.subplot(1,2,1).imshow(image, cmap='gray')
+    plt.subplot(1,2,2).imshow(restored_image, cmap='gray')
+    plt.show()
+else:
+    print(color)
 
 
