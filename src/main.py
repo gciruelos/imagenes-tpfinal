@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 M = 8
-Q = 4
+Q = 16
 U = 256
 
 ###############################################################################
@@ -109,6 +109,37 @@ def uncompress_dc(compressed):
         compressed[i][0,0] += compressed[i-1][0,0]
 
 ###############################################################################
+#################################  RGB  #######################################
+###############################################################################
+
+def block_division_rgb(img):
+    blocks = []
+    crcb_blocks = []
+    k1, k2, k3 = img.shape
+    for start1 in range(k1 // M):
+        for start2 in range(k2 // M):
+            block = np.zeros((M,M), dtype=np.uint8)
+            cr = 0.0
+            cb = 0.0
+            for i in range(M):
+                for j in range(M):
+                    block[i,j] = img[start1 * M + i, start2 * M + j, 0]
+                    cr += img[start1 * M + i, start2 * M + j, 1]
+                    cb += img[start1 * M + i, start2 * M + j, 2]
+            blocks.append(block)
+            crcb_blocks.append((int(cr / (M*M)), int(cb / (M*M))))
+    return blocks, crcb_blocks
+
+def join_blocks_rgb(blocks, crcb_blocks):
+    image_size = int(np.sqrt(len(blocks)) * M)
+    full_image = np.zeros((image_size,image_size,3), dtype=np.int)
+    for b in range(len(blocks)):
+        for i in range(M):
+            for j in range(M):
+                full_image[(b // (image_size // M)) * M + i, (b % (image_size // M)) * M + j,:] = [blocks[b][i,j],crcb_blocks[b][0], crcb_blocks[b][1]]
+    return full_image
+
+###############################################################################
 #########################################  MAIN ###############################
 ###############################################################################
 
@@ -137,6 +168,27 @@ def greyscale(image):
     restored_image = join_blocks(original_blocks)
     return huffman_coding, restored_image
 
+def rgb(image):
+    ##### FORWARD ###########
+    print(image)
+    image_ycc = cv2.cvtColor(image, cv2.COLOR_BGR2YCR_CB)
+    image_blocks, cbcr_blocks = block_division_rgb(image)
+    dct_blocks = list(map(apply_dct, image_blocks))
+    quantized_blocks = list(map(lambda x: quantize(x, Q), dct_blocks))
+    compress_dc(quantized_blocks)
+    zigzag_blocks = list(map(entropy_coding, quantized_blocks))
+    huffman_coding, huffman_map = huffman_code(zigzag_blocks)
+
+    ##### INVERSE ###########
+    uncompress_dc(quantized_blocks)
+    unquantized_blocks = list(map(lambda x: unquantize(x, Q), quantized_blocks))
+    original_blocks = list(map(apply_idct, unquantized_blocks))
+    restored_image = join_blocks_rgb(original_blocks, cbcr_blocks)
+    image_rgb = cv2.cvtColor(image, cv2.COLOR_YCR_CB2RGB)
+    print(image_rgb)
+    return huffman_coding, image_rgb
+
+
 
 pil_image = Image.open(argv[1])
 if is_greyscale(pil_image):
@@ -148,6 +200,12 @@ if is_greyscale(pil_image):
     plt.subplot(1,2,2).imshow(restored_image, cmap='gray')
     plt.show()
 else:
-    print(color)
+    image = np.asarray(pil_image.convert('RGB'))
+    huffman_coding, restored_image = rgb(image)
+    print(huffman_coding)
+    print('Compressed size:', len(huffman_coding) / 1024, 'KB')
+    plt.subplot(1,2,1).imshow(image)
+    plt.subplot(1,2,2).imshow(restored_image)
+    plt.show()
 
 
