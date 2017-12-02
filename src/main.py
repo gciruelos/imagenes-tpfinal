@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 M = 8
-Q = 8
+Q = 16
 U = 256
 
 ###############################################################################
@@ -115,9 +115,9 @@ def uncompress_dc(compressed):
 def block_division_rgb(img):
     blocks = []
     crcb_blocks = []
-    k1, k2, k3 = img.shape
-    for start1 in range(k1 // M):
-        for start2 in range(k2 // M):
+    k1, k2 = (img.shape[0] // M, img.shape[1] // M)
+    for start1 in range(k1):
+        for start2 in range(k2):
             block = np.zeros((M,M), dtype=np.uint8)
             cr = 0.0
             cb = 0.0
@@ -130,13 +130,22 @@ def block_division_rgb(img):
             crcb_blocks.append((int(cr / (M*M)), int(cb / (M*M))))
     return blocks, crcb_blocks
 
-def join_blocks_rgb(blocks, crcb_blocks):
-    image_size = int(np.sqrt(len(blocks)) * M)
-    full_image = np.zeros((image_size,image_size,3), dtype=np.uint8)
-    for b in range(len(blocks)):
-        for i in range(M):
-            for j in range(M):
-                full_image[(b // (image_size // M)) * M + i, (b % (image_size // M)) * M + j,:] = [blocks[b][i,j],crcb_blocks[b][0], crcb_blocks[b][1]]
+def join_blocks_rgb(blocks, crcb_blocks, img):
+    imsize = np.shape(img)
+    full_image = np.zeros(imsize, dtype=np.uint8)
+    k1, k2 = (k // M for k in imsize[:2])
+    for x in range(k1):
+        for y in range(k2):
+            for i in range(M):
+                for j in range(M):
+                    b = x * k2 + y
+                    full_image[x * M + i, y * M + j,:] = [blocks[b][i,j],crcb_blocks[b][0], crcb_blocks[b][1]]
+    for x in range(imsize[0]):
+        for y in range(k2 * M, imsize[1]):
+            full_image[x, y] = img[x, y]
+    for x in range(k1 * M, imsize[0]):
+        for y in range(k2 * M):
+            full_image[x, y] = img[x, y]
     return full_image
 
 ###############################################################################
@@ -170,7 +179,7 @@ def greyscale(image):
 
 def rgb(image):
     ###### FORWARD ###########
-    print(np.shape(image))
+    imsize = image.shape
     image_ycc = cv2.cvtColor(image, cv2.COLOR_RGB2YCR_CB)
     image_blocks, cbcr_blocks = block_division_rgb(image_ycc)
     dct_blocks = list(map(apply_dct, image_blocks))
@@ -183,7 +192,7 @@ def rgb(image):
     uncompress_dc(quantized_blocks)
     unquantized_blocks = list(map(lambda x: unquantize(x, Q), quantized_blocks))
     original_blocks = list(map(apply_idct, unquantized_blocks))
-    restored_image = join_blocks_rgb(original_blocks, cbcr_blocks)
+    restored_image = join_blocks_rgb(original_blocks, cbcr_blocks, image_ycc)
     image_rgb = cv2.cvtColor(restored_image, cv2.COLOR_YCR_CB2RGB)
     return huffman_coding, image_rgb
 
