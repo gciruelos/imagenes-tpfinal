@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 M = 8
-Q = 128
+Q = 8
 U = 256
 
 ###############################################################################
@@ -139,17 +139,6 @@ def join_blocks_rgb(blocks, crcb_blocks):
                 full_image[(b // (image_size // M)) * M + i, (b % (image_size // M)) * M + j,:] = [blocks[b][i,j],crcb_blocks[b][0], crcb_blocks[b][1]]
     return full_image
 
-def join_blocks_rgb_trypass(blocks, crcb_blocks):
-    image_size = int(np.sqrt(len(blocks)) * M)
-    full_image = np.zeros((image_size,image_size,3), dtype=np.uint8)
-    for b in range(len(blocks)):
-        for i in range(M):
-            for j in range(M):
-                try:
-                    full_image[(b // (image_size // M)) * M + i, (b % (image_size // M)) * M + j,:] = [blocks[b][i,j],crcb_blocks[b][0], crcb_blocks[b][1]]
-                except:
-                    pass
-    return full_image
 ###############################################################################
 #########################################  MAIN ###############################
 ###############################################################################
@@ -200,9 +189,6 @@ def rgb(image):
 
 
 
-#pil_image = Image.fromarray(np.array([[[i // 2, i // 4, 255 - i // 2] for j in range(512)]
-#                                      for i in range(512)], dtype = np.uint8))
-#pil_image.save("synth.png")
 pil_image = Image.open(argv[1])
 if is_greyscale(pil_image):
     image = np.asarray(pil_image.convert('L'))
