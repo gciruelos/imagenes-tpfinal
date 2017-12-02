@@ -84,13 +84,16 @@ def huffman_code(zigzag_blocks):
 ###########################  INVERSE  #########################################
 ###############################################################################
 
-def join_blocks(blocks):
-    image_size = int(np.sqrt(len(blocks)) * M)
-    full_image = np.zeros((image_size,image_size), dtype=np.int)
-    for b in range(len(blocks)):
-        for i in range(M):
-            for j in range(M):
-                full_image[(b // (image_size // M)) * M + i, (b % (image_size // M)) * M + j]  = blocks[b][i,j]
+def join_blocks(blocks, image):
+    imsize = np.shape(image)
+    full_image = np.zeros(imsize, dtype=np.uint8)
+    k1, k2 = (k // M for k in imsize[:2])
+    for x in range(k1):
+        for y in range(k2):
+            b = x * k2 + y
+            full_image[x * M : (x + 1) * M, y * M : (y + 1) * M] = blocks[b]
+    full_image[:, k2 * M:] = image[:, k2 * M:]
+    full_image[k1 * M:, :k2 * M] = image[k1 * M:, :k2 * M]
     return full_image
 
 def apply_idct(block):
@@ -174,7 +177,7 @@ def greyscale(image):
     uncompress_dc(quantized_blocks)
     unquantized_blocks = list(map(lambda x: unquantize(x, Q), quantized_blocks))
     original_blocks = list(map(apply_idct, unquantized_blocks))
-    restored_image = join_blocks(original_blocks)
+    restored_image = join_blocks(original_blocks, image)
     return huffman_coding, restored_image
 
 def rgb(image):
