@@ -11,12 +11,24 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 M = 8
-Q = 16
-U = 256
+M_COLOR = 512
+Q_AC = 0.3
+Q_DC = 0.3
+U = 1
 
 ###############################################################################
 ###########################  FORWARD  #########################################
 ###############################################################################
+
+jpeg_table = [
+        [52, 55, 61, 66, 70, 61, 64, 73],
+        [63, 59, 55, 90, 109, 85, 69, 72],
+        [62, 59, 68, 113, 144, 104, 66, 73],
+        [63, 58, 71, 122, 154, 106, 70, 69],
+        [67, 61, 68, 104, 126, 88, 68, 70],
+        [79, 65, 60, 70, 77, 68, 58, 75],
+        [85, 71, 64, 59, 55, 61, 65, 83],
+        [87, 79, 69, 68, 65, 76, 78, 94]]
 
 def block_division(img):
     blocks = []
@@ -34,12 +46,15 @@ def apply_dct(block):
     #return cv2.dct(np.float32(block) - U // 2 + 1)
     return cv2.dct(np.float32(block))
 
-def quantize(dct_block, q):
+def quantize(dct_block):
     block = np.zeros((M,M), dtype=np.int)
     k1, k2 = dct_block.shape
     for i in range(k1):
         for j in range(k2):
-            block[i,j] = dct_block[i,j] / q
+            q = Q_DC if i == 0 and j == 0 else Q_AC
+            block[i,j] = dct_block[i,j] / (jpeg_table[i][j] * q)
+            if abs(block[i,j]) < U:
+                block[i,j] = 0
     return block
 
 def compress_dc(uncompressed):
@@ -99,12 +114,13 @@ def join_blocks(blocks, image):
 def apply_idct(block):
     return cv2.idct(np.float32(block))
 
-def unquantize(block, q):
+def unquantize(block):
     dct_block = np.zeros((M,M), dtype=np.float32)
     k1, k2 = dct_block.shape
     for i in range(k1):
         for j in range(k2):
-            dct_block[i,j] = block[i,j] * q
+            q = Q_DC if i == 0 and j == 0 else Q_AC
+            dct_block[i,j] = block[i,j] * q * jpeg_table[i][j]
     return dct_block
 
 def uncompress_dc(compressed):
@@ -127,10 +143,17 @@ def block_division_rgb(img):
             for i in range(M):
                 for j in range(M):
                     block[i,j] = img[start1 * M + i, start2 * M + j, 0]
-                    cr += img[start1 * M + i, start2 * M + j, 1]
-                    cb += img[start1 * M + i, start2 * M + j, 2]
             blocks.append(block)
-            crcb_blocks.append((int(cr / (M*M)), int(cb / (M*M))))
+    k1, k2 = (img.shape[0] // M_COLOR, img.shape[1] // M_COLOR)
+    for start1 in range(k1):
+        for start2 in range(k2):
+            cr = 0.0
+            cb = 0.0
+            for i in range(M_COLOR):
+                for j in range(M_COLOR):
+                    cr += img[start1 * M_COLOR + i, start2 * M_COLOR + j, 1]
+                    cb += img[start1 * M_COLOR + i, start2 * M_COLOR + j, 2]
+            crcb_blocks.append((int(cr / (M_COLOR*M_COLOR)), int(cb / (M_COLOR*M_COLOR))))
     return blocks, crcb_blocks
 
 def join_blocks_rgb(blocks, crcb_blocks, img):
@@ -142,13 +165,22 @@ def join_blocks_rgb(blocks, crcb_blocks, img):
             for i in range(M):
                 for j in range(M):
                     b = x * k2 + y
-                    full_image[x * M + i, y * M + j,:] = [blocks[b][i,j],crcb_blocks[b][0], crcb_blocks[b][1]]
+                    full_image[x * M + i, y * M + j,0] = blocks[b][i,j]
+    k1, k2 = (k // M_COLOR for k in imsize[:2])
+    for x in range(k1):
+        for y in range(k2):
+            for i in range(M_COLOR):
+                for j in range(M_COLOR):
+                    b = x * k2 + y
+                    print(b)
+                    full_image[x * M_COLOR + i, y * M_COLOR + j,1:] = [crcb_blocks[b][0], crcb_blocks[b][1]]
     for x in range(imsize[0]):
         for y in range(k2 * M, imsize[1]):
             full_image[x, y] = img[x, y]
     for x in range(k1 * M, imsize[0]):
         for y in range(k2 * M):
             full_image[x, y] = img[x, y]
+    print(full_image)
     return full_image
 
 ###############################################################################
@@ -168,14 +200,15 @@ def greyscale(image):
     ##### FORWARD ###########
     image_blocks = block_division(image)
     dct_blocks = list(map(apply_dct, image_blocks))
-    quantized_blocks = list(map(lambda x: quantize(x, Q), dct_blocks))
+    quantized_blocks = list(map(quantize, dct_blocks))
+    print(quantized_blocks)
     compress_dc(quantized_blocks)
     zigzag_blocks = list(map(entropy_coding, quantized_blocks))
     huffman_coding, huffman_map = huffman_code(zigzag_blocks)
 
     ##### INVERSE ###########
     uncompress_dc(quantized_blocks)
-    unquantized_blocks = list(map(lambda x: unquantize(x, Q), quantized_blocks))
+    unquantized_blocks = list(map(unquantize, quantized_blocks))
     original_blocks = list(map(apply_idct, unquantized_blocks))
     restored_image = join_blocks(original_blocks, image)
     return huffman_coding, restored_image
@@ -185,19 +218,20 @@ def rgb(image):
     imsize = image.shape
     image_ycc = cv2.cvtColor(image, cv2.COLOR_RGB2YCR_CB)
     image_blocks, cbcr_blocks = block_division_rgb(image_ycc)
+    print(cbcr_blocks)
     dct_blocks = list(map(apply_dct, image_blocks))
-    quantized_blocks = list(map(lambda x: quantize(x, Q), dct_blocks))
+    quantized_blocks = list(map(quantize, dct_blocks))
     compress_dc(quantized_blocks)
     zigzag_blocks = list(map(entropy_coding, quantized_blocks))
     huffman_coding, huffman_map = huffman_code(zigzag_blocks)
 
     ##### INVERSE ###########
     uncompress_dc(quantized_blocks)
-    unquantized_blocks = list(map(lambda x: unquantize(x, Q), quantized_blocks))
+    unquantized_blocks = list(map(unquantize, quantized_blocks))
     original_blocks = list(map(apply_idct, unquantized_blocks))
     restored_image = join_blocks_rgb(original_blocks, cbcr_blocks, image_ycc)
     image_rgb = cv2.cvtColor(restored_image, cv2.COLOR_YCR_CB2RGB)
-    return huffman_coding, image_rgb
+    return len(huffman_coding) + image_ycc.size * 2 / 3, image_rgb
 
 
 
@@ -212,9 +246,9 @@ if is_greyscale(pil_image):
     plt.show()
 else:
     image = np.asarray(pil_image.convert('RGB'))
-    huffman_coding, restored_image = rgb(image)
+    compressed_size, restored_image = rgb(image)
     #print(huffman_coding)
-    print('Compressed size:', len(huffman_coding) / 1024, 'KB')
+    print('Compressed size:', compressed_size / 1024, 'KB')
     plt.subplot(1,2,1).imshow(image)
     plt.subplot(1,2,2).imshow(restored_image)
     plt.show()
