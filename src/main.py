@@ -166,13 +166,12 @@ def join_blocks_rgb(blocks, crcb_blocks, img):
                 for j in range(M):
                     b = x * k2 + y
                     full_image[x * M + i, y * M + j,0] = blocks[b][i,j]
-    k1, k2 = (k // M_COLOR for k in imsize[:2])
-    for x in range(k1):
-        for y in range(k2):
+    kC1, kC2 = (k // M_COLOR for k in imsize[:2])
+    for x in range(kC1):
+        for y in range(kC2):
             for i in range(M_COLOR):
                 for j in range(M_COLOR):
-                    b = x * k2 + y
-                    print(b)
+                    b = x * kC2 + y
                     full_image[x * M_COLOR + i, y * M_COLOR + j,1:] = [crcb_blocks[b][0], crcb_blocks[b][1]]
     for x in range(imsize[0]):
         for y in range(k2 * M, imsize[1]):
@@ -180,7 +179,12 @@ def join_blocks_rgb(blocks, crcb_blocks, img):
     for x in range(k1 * M, imsize[0]):
         for y in range(k2 * M):
             full_image[x, y] = img[x, y]
-    print(full_image)
+    #for x in range(imsize[0]):
+    #    for y in range(min(k2 * M, kC2 * M_COLOR), imsize[1]):
+    #        full_image[x, y] = img[x, y]
+    #for x in range(min(k1 * M, kC1 * M_COLOR), imsize[0]):
+    #    for y in range(min(k2 * M, kC2 * M_COLOR)):
+    #        full_image[x, y] = img[x, y]
     return full_image
 
 ###############################################################################
