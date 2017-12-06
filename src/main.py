@@ -10,10 +10,10 @@ import collections
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
-M = 8
-M_COLOR = 512
-Q_AC = 0.3
-Q_DC = 0.3
+M = 32
+M_COLOR = 4
+Q_AC = 0.5
+Q_DC = 0.5
 U = 1
 
 ###############################################################################
@@ -52,7 +52,7 @@ def quantize(dct_block):
     for i in range(k1):
         for j in range(k2):
             q = Q_DC if i == 0 and j == 0 else Q_AC
-            block[i,j] = dct_block[i,j] / (jpeg_table[i][j] * q)
+            block[i,j] = dct_block[i,j] / (jpeg_table[i // (8 * M)][j // (8 * M)] * q)
             if abs(block[i,j]) < U:
                 block[i,j] = 0
     return block
@@ -120,7 +120,7 @@ def unquantize(block):
     for i in range(k1):
         for j in range(k2):
             q = Q_DC if i == 0 and j == 0 else Q_AC
-            dct_block[i,j] = block[i,j] * q * jpeg_table[i][j]
+            dct_block[i,j] = block[i,j] * q * jpeg_table[i // (8 * M)][j // (8 * M)]
     return dct_block
 
 def uncompress_dc(compressed):
@@ -173,18 +173,18 @@ def join_blocks_rgb(blocks, crcb_blocks, img):
                 for j in range(M_COLOR):
                     b = x * kC2 + y
                     full_image[x * M_COLOR + i, y * M_COLOR + j,1:] = [crcb_blocks[b][0], crcb_blocks[b][1]]
-    for x in range(imsize[0]):
-        for y in range(k2 * M, imsize[1]):
-            full_image[x, y] = img[x, y]
-    for x in range(k1 * M, imsize[0]):
-        for y in range(k2 * M):
-            full_image[x, y] = img[x, y]
     #for x in range(imsize[0]):
-    #    for y in range(min(k2 * M, kC2 * M_COLOR), imsize[1]):
+    #    for y in range(k2 * M, imsize[1]):
     #        full_image[x, y] = img[x, y]
-    #for x in range(min(k1 * M, kC1 * M_COLOR), imsize[0]):
-    #    for y in range(min(k2 * M, kC2 * M_COLOR)):
+    #for x in range(k1 * M, imsize[0]):
+    #    for y in range(k2 * M):
     #        full_image[x, y] = img[x, y]
+    for x in range(imsize[0]):
+        for y in range(min(k2 * M, kC2 * M_COLOR), imsize[1]):
+            full_image[x, y] = img[x, y]
+    for x in range(min(k1 * M, kC1 * M_COLOR), imsize[0]):
+        for y in range(min(k2 * M, kC2 * M_COLOR)):
+            full_image[x, y] = img[x, y]
     return full_image
 
 ###############################################################################
@@ -205,7 +205,6 @@ def greyscale(image):
     image_blocks = block_division(image)
     dct_blocks = list(map(apply_dct, image_blocks))
     quantized_blocks = list(map(quantize, dct_blocks))
-    print(quantized_blocks)
     compress_dc(quantized_blocks)
     zigzag_blocks = list(map(entropy_coding, quantized_blocks))
     huffman_coding, huffman_map = huffman_code(zigzag_blocks)
@@ -222,7 +221,6 @@ def rgb(image):
     imsize = image.shape
     image_ycc = cv2.cvtColor(image, cv2.COLOR_RGB2YCR_CB)
     image_blocks, cbcr_blocks = block_division_rgb(image_ycc)
-    print(cbcr_blocks)
     dct_blocks = list(map(apply_dct, image_blocks))
     quantized_blocks = list(map(quantize, dct_blocks))
     compress_dc(quantized_blocks)
@@ -235,7 +233,7 @@ def rgb(image):
     original_blocks = list(map(apply_idct, unquantized_blocks))
     restored_image = join_blocks_rgb(original_blocks, cbcr_blocks, image_ycc)
     image_rgb = cv2.cvtColor(restored_image, cv2.COLOR_YCR_CB2RGB)
-    return len(huffman_coding) + image_ycc.size * 2 / 3, image_rgb
+    return len(huffman_coding) + (image_ycc.size * 2 / 3) / (M_COLOR * M_COLOR), image_rgb
 
 
 
