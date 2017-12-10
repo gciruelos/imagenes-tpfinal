@@ -1,0 +1,65 @@
+\documentclass{beamer}
+\usepackage{beamerthemeshadow}
+\usepackage[spanish]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{enumerate}
+\usepackage{mathtools}
+\usepackage{mathpazo}
+\usepackage{amssymb}
+\usepackage{stmaryrd}
+\usepackage{lmodern}
+
+%\setbeamertemplate{theorems}[ams style] % numbered
+\theoremstyle{definition}
+\makeatletter
+\setbeamertemplate{theorem begin}
+{%
+  \inserttheoremheadfont \bfseries
+  \inserttheoremname \inserttheoremnumber
+  \ifx\inserttheoremaddition\@empty\else\ (\inserttheoremaddition)\fi%
+  :
+  \normalfont
+}
+\setbeamertemplate{theorem end}{%
+  % empty
+}
+\makeatother
+
+
+\begin{document}
+\title{Compresión: JPEG}
+\author{Gabriel Thibeault y Gonzalo Ciruelos}
+\date{13 de diciembre de 2017}
+
+
+%\frame{\titlepage}
+
+\section{Introducción}
+\frame{\frametitle{El trabajo}
+\begin{center}
+    Symbolic Model Checking withouth BDDs
+\end{center}
+    \vspace{2em}
+Autores:
+\begin{itemize}
+    \item Armin Biere$^1$
+    \item Alessandro Cimatti$^2$
+    \item Edmund Clarke$^1$
+    \item Yunshan Zhu$^1$
+\end{itemize}
+$^1$ Departamento de Computación de la Universidad de Carnegie Mellon
+
+$^2$ Instituto de Investigación Científica y Tecnológica de Provo, Italia
+}
+
+\frame{
+\huge
+\begin{center}
+¿Preguntas?
+\end{center}
+}
+
+\end{document}
+
+
