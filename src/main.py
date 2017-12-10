@@ -10,11 +10,11 @@ import collections
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
-M = 32
+M = 8
 M_COLOR = 4
-Q_AC = 3
-Q_DC = 3
-U = 1
+Q_AC = 0.4
+Q_DC = 0.4
+U = 3
 
 ###############################################################################
 ###########################  FORWARD  #########################################
@@ -215,7 +215,7 @@ def greyscale(image):
     unquantized_blocks = list(map(unquantize, quantized_blocks))
     original_blocks = list(map(apply_idct, unquantized_blocks))
     restored_image = join_blocks(original_blocks, image)
-    return huffman_coding, restored_image
+    return len(huffman_map) * 2 +  len(huffman_coding), restored_image
 
 def rgb(image):
     ###### FORWARD ###########
@@ -234,24 +234,23 @@ def rgb(image):
     original_blocks = list(map(apply_idct, unquantized_blocks))
     restored_image = join_blocks_rgb(original_blocks, cbcr_blocks, image_ycc)
     image_rgb = cv2.cvtColor(restored_image, cv2.COLOR_YCR_CB2RGB)
-    return len(huffman_coding) + (image_ycc.size * 2 / 3) / (M_COLOR * M_COLOR), image_rgb
+    return len(huffman_map) * 2 + len(huffman_coding) + (image_ycc.size * 2 / 3) / (M_COLOR * M_COLOR), image_rgb
 
-
-
-pil_image = Image.open(argv[1])
-if is_greyscale(pil_image):
-    image = np.asarray(pil_image.convert('L'))
-    huffman_coding, restored_image = greyscale(image)
-    #print(huffman_coding)
-    print('Compressed size:', len(huffman_coding) / 1024, 'KB')
-    plt.subplot(1,2,1).imshow(image, cmap='gray')
-    plt.subplot(1,2,2).imshow(restored_image, cmap='gray')
-    plt.show()
-else:
-    image = np.asarray(pil_image.convert('RGB'))
-    compressed_size, restored_image = rgb(image)
-    #print(huffman_coding)
-    print('Compressed size:', compressed_size / 1024, 'KB')
-    plt.subplot(1,2,1).imshow(image)
-    plt.subplot(1,2,2).imshow(restored_image)
-    plt.show()
+if __name__ == '__main__':
+    pil_image = Image.open(argv[1])
+    if is_greyscale(pil_image):
+        image = np.asarray(pil_image.convert('L'))
+        huffman_coding, restored_image = greyscale(image)
+        #print(huffman_coding)
+        print('Compressed size:', huffman_coding / 1024, 'KB')
+        plt.subplot(1,2,1).imshow(image, cmap='gray')
+        plt.subplot(1,2,2).imshow(restored_image, cmap='gray')
+        plt.show()
+    else:
+        image = np.asarray(pil_image.convert('RGB'))
+        compressed_size, restored_image = rgb(image)
+        #print(huffman_coding)
+        print('Compressed size:', compressed_size / 1024, 'KB')
+        plt.subplot(1,2,1).imshow(image)
+        plt.subplot(1,2,2).imshow(restored_image)
+        plt.show()
