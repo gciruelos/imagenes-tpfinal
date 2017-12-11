@@ -57,6 +57,58 @@ El trabajo en el cual basamos nuestra implementación es
 \end{center}
 }
 
+\frame{\frametitle{DCT}
+
+La DCT bidimensional no es más que aplicar la unidimensional por filas y luego por columnas.
+\footnotesize{
+\begin{equation*}
+    F(u, v) = \frac{C(u)C(v)}{4} \sum\limits_{x = 0}^{7}
+    \bigg(\sum\limits_{y = 0}^{7} f(x, y) 
+    cos\Big(\frac{(2x + 1)u\pi}{16}\Big)\bigg)
+    cos\Big(\frac{(2y + 1)v\pi}{16}\Big)
+\end{equation*}
+\begin{equation*}
+    f(x, y) =  \sum\limits_{u = 0}^{7}
+    \bigg(\sum\limits_{v = 0}^{7} \frac{C(u)C(v)}{4}F(u, v) 
+    cos\Big(\frac{(2x + 1)u\pi}{16}\Big)\bigg)
+    cos\Big(\frac{(2y + 1)v\pi}{16}\Big)
+\end{equation*}
+\begin{equation*}
+    C(t) :=
+    \begin{cases}
+        \frac{1}{\sqrt{2}} &\quad\text{si } t = 0 \\
+        1                  &\quad\text{si } t \neq 0
+    \end{cases}
+\end{equation*}
+}}
+
+\frame{\frametitle{Cuantización}
+
+La cuantización es el paso de JPEG que introduce pérdidas.
+
+\begin{equation*}
+    F^Q(u, v) = Round\Big(\frac{F(u, v)}{Q(u, V)}\Big)
+\end{equation*}
+\begin{equation*}
+    F'(u, v) = F^Q(u, v)Q(u, V)
+\end{equation*}
+
+$Q$ es una matriz fija multiplicada por una constante de cuantización $q$:
+
+\begin{equation*}
+    Q = q * 
+\begin{bmatrix}
+16 &  11  & 10  & 16  & 24  & 40   &  51  &  61  \\ %\hline
+12 &  12  & 14  & 19  & 26  & 58   &  60  &  55  \\ %\hline
+14 &  13  & 16  & 24  & 40  & 57   &  69  &  56  \\ %\hline
+14 &  17  & 22  & 29  & 51  & 87   &  80  &  62  \\ %\hline
+18 &  22  & 37  & 56  & 68  & 109  &  103 &  77  \\ %\hline
+24 &  35  & 55  & 64  & 81  & 104  &  113 &  92  \\ %\hline
+49 &  64  & 78  & 87  & 103 &  121 &  120 &  101 \\ %\hline
+72 &  92  & 95  & 98  & 112 &  100 &  103 &  99  \\ %\hline
+\end{bmatrix}
+\end{equation*}
+}
 
 \frame{\frametitle{Codificación de Huffman}
 
@@ -77,6 +129,17 @@ El trabajo en el cual basamos nuestra implementación es
 \[
   \to [(0, 10), (0, 1), (0, 1), (4, 2), (0, 1), (2, 1)]
 \]
+}
+
+\frame{\frametitle{Imágenes a Color}
+
+Para comprimir una imagen en $RGB$ se convierte al espacio $Y'C_bC_r$.
+El componente $Y'$ es análogo a la intensidad en $HSI$, mientras que $C_b$ y $C_r$ mantienen información de color (la diferencia de azul y rojo respecto de $Y'$).
+
+\hspace{1cm}
+
+Luego de transformar, el componente $Y'$ es comprimido como se detalló previamente.
+Se toman bloques de tamaño $M_c \times M_c$ y se promedian $C_b$ y $C_r$ para cada bloque.
 }
 
 \frame{\frametitle{Análisis cuantitativo (grises): Tamaño del bloque}
