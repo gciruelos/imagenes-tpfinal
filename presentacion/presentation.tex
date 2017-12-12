@@ -9,6 +9,7 @@
 \usepackage{amssymb}
 \usepackage{stmaryrd}
 \usepackage{lmodern}
+\usepackage[font=scriptsize,justification=centering]{caption}
 
 %\setbeamertemplate{theorems}[ams style] % numbered
 \theoremstyle{definition}
@@ -60,6 +61,8 @@ El trabajo en el cual basamos nuestra implementación es
 \frame{\frametitle{DCT}
 
 La DCT bidimensional no es más que aplicar la unidimensional por filas y luego por columnas.
+La fórmula para 8x8 a continuación puede generalizarse:
+
 \footnotesize{
 \begin{equation*}
     F(u, v) = \frac{C(u)C(v)}{4} \sum\limits_{x = 0}^{7}
@@ -67,6 +70,9 @@ La DCT bidimensional no es más que aplicar la unidimensional por filas y luego 
     cos\Big(\frac{(2x + 1)u\pi}{16}\Big)\bigg)
     cos\Big(\frac{(2y + 1)v\pi}{16}\Big)
 \end{equation*}
+
+La anti-transformada:
+
 \begin{equation*}
     f(x, y) =  \sum\limits_{u = 0}^{7}
     \bigg(\sum\limits_{v = 0}^{7} \frac{C(u)C(v)}{4}F(u, v) 
@@ -84,19 +90,23 @@ La DCT bidimensional no es más que aplicar la unidimensional por filas y luego 
 
 \frame{\frametitle{Cuantización}
 
-La cuantización es el paso de JPEG que introduce pérdidas.
+\small{La cuantización es el paso de JPEG que introduce pérdidas.}
 
 \begin{equation*}
     F^Q(u, v) = Round\Big(\frac{F(u, v)}{Q(u, V)}\Big)
 \end{equation*}
+
+\footnotesize{La operación inversa:}
+
 \begin{equation*}
     F'(u, v) = F^Q(u, v)Q(u, V)
 \end{equation*}
 
-$Q$ es una matriz fija multiplicada por una constante de cuantización $q$:
+\footnotesize{$Q$ es una matriz fija multiplicada por una constante de cuantización $q_{AC}$.
+El primer coeficiente, $F(0, 0)$ puede ser cuantizado distintamente del resto: $Q(0, 0) = 16 * q_{DC}$.}
 
 \begin{equation*}
-    Q = q * 
+    Q = q_{AC} * 
 \begin{bmatrix}
 16 &  11  & 10  & 16  & 24  & 40   &  51  &  61  \\ %\hline
 12 &  12  & 14  & 19  & 26  & 58   &  60  &  55  \\ %\hline
@@ -208,6 +218,68 @@ $\to$
 \end{center}
 }
 
+\frame{\frametitle{Análisis cualitativo (grises)}
+\begin{center}
+    \includegraphics[width=6cm]{images/{16-16-3-3-4}.png}
+    \par $M = 16; q_{DC} = 3; q_{AC} = 3; U = 4$.
+    \par Severo \textit{blocking}.
+\end{center}
+}
+
+\frame{\frametitle{Análisis cualitativo (grises)}
+\begin{center}
+    \includegraphics[width=6cm]{images/{32-32-.5-.5-2}.png}
+    \par $M = 32; q_{DC} = 0.5; q_{AC} = 0.5; U = 2$. 
+    \par Bien condicionada.
+\end{center}
+}
+
+\frame{\frametitle{Análisis cualitativo (grises)}
+\begin{center}
+    \includegraphics[width=6cm]{images/{32-32-1.5-1.5-2}.png}
+    \par $M = 32; q_{DC} = 1.5; q_{AC} = 1.5; U = 2$. 
+    \par Ligero \textit{blocking} y \textit{ringing}.
+\end{center}
+}
+
+\frame{\frametitle{Análisis cualitativo (grises)}
+\begin{center}
+    \includegraphics[width=6cm]{images/{32-32-1.5-1.5-4}.png}
+    \par $M = 32; q_{DC} = 1.5; q_{AC} = 1.5; U = 2$. 
+    \par Ligero \textit{blocking} y \textit{ringing}.
+\end{center}
+}
+
+\frame{\frametitle{Análisis cualitativo (grises)}
+\begin{center}
+    \includegraphics[width=5cm]{images/{8-8-.5-.5-2}.png}
+    \includegraphics[width=5cm]{images/{32-32-.5-.5-2}.png}
+    \par Se observa menor \textit{blocking} a pesar de aumentar 16 veces el tamaño de los 
+    bloques en la imagen de la derecha.
+\end{center}
+}
+
+\frame{\frametitle{Análisis cualitativo (color)}
+\begin{center}
+    \includegraphics[width=6cm]{images/{lena_comp}.png}
+    \par \textit{Blocking} por color y gris. Artifacts de color por bloques cruzando bordes.
+\end{center}
+}
+
+\frame{\frametitle{Análisis cualitativo (color)}
+\begin{center}
+    \includegraphics[width=6cm]{images/{32-32-2-2-2}.png}
+    \par \textit{Blocking} por color y gris. \textit{Ringing}.
+\end{center}
+}
+
+\frame{\frametitle{Análisis cualitativo (color)}
+\begin{center}
+    \includegraphics[width=6cm]{images/{8-32-.5-.5-1}.png}
+    \par Artifacts de \textit{blocking} debido a superficie diagonal.
+\end{center}
+}
+
 \frame{
 \huge
 \begin{center}
@@ -216,5 +288,3 @@ $\to$
 }
 
 \end{document}
-
-
