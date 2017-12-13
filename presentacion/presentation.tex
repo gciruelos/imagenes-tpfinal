@@ -196,7 +196,6 @@ Se toman bloques de tamaño $M_c \times M_c$ y se promedian $C_b$ y $C_r$ para c
 \end{center}
 }
 
-
 \frame{\frametitle{Análisis cuantitativo (RGB): Tamaño del bloque}
 \begin{center}
 \includegraphics[width=10cm]{images/quant-rgb-m.pdf}
@@ -226,6 +225,18 @@ Se toman bloques de tamaño $M_c \times M_c$ y se promedian $C_b$ y $C_r$ para c
 \includegraphics[width=10cm]{images/quant-rgb-u.pdf}
 \end{center}
 }
+
+\frame{\frametitle{Análisis cuantitativo: parámetros óptimos (rangos)}
+\begin{itemize}
+  \item Tamaño del bloque: $8 \times 8$ -- $16 \times 16$.
+  \item Tamaño del bloque de color: $2 \times 2$ -- $4 \times 4$.
+  \item Cuantización del DC: $1.0$ -- $1.2$.
+  \item Cuantización del AC: $0.2$ -- $0.5$.
+  \item Threshold de cuantización $1$ -- $3$.
+\end{itemize}
+}
+
+
 
 \frame{\frametitle{Análisis cualitativo (grises)}
 \begin{center}
